@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # Load a patched ir_datasets that loads the injected data inside the TIRA sandbox
-from tira.third_party_integrations import ir_datasets, get_output_directory
+from tira.third_party_integrations import ir_datasets, ensure_pyterrier_is_loaded, get_output_directory
 from pathlib import Path
 import pandas as pd
 import pyterrier as pt
 from more_itertools import chunked
 from tqdm import tqdm
+import argparse
+from pathlib import Path
 
+ensure_pyterrier_is_loaded()
 
 tokeniser = pt.autoclass("org.terrier.indexing.tokenisation.Tokeniser").getTokeniser()
 def pt_tokenise(text):
@@ -37,11 +40,11 @@ if __name__ == '__main__':
     # Document processors persist their results in a file documents.jsonl.gz in the output directory.
     output_file = Path(output_dir) / 'documents.jsonl.gz'
 
-    import argparse
+    parser = argparse.ArgumentParser()
     parser.add_argument('index')
     args = parser.parse_args()
 
-    retr = pt.BatchRetrieve(args.index or './2023-11-07-11-58-59/output/index/', wmodel='BM25', num_results=17)
+    retr = pt.BatchRetrieve(str(Path(args.index).resolve()), wmodel='BM25', num_results=17)
 
     # You can pass as many additional arguments to your program, e.g., via argparse, to modify the behaviour
 
