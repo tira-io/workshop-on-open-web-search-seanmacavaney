@@ -44,7 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('index')
     args = parser.parse_args()
 
-    retr = pt.BatchRetrieve(str(Path(args.index).resolve() + '/index/'), wmodel='BM25', num_results=17)
+    retr = pt.BatchRetrieve(str(Path(args.index).resolve()) + '/index/', wmodel='BM25', num_results=17)
 
     # You can pass as many additional arguments to your program, e.g., via argparse, to modify the behaviour
 
