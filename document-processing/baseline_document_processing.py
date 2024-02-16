@@ -3,15 +3,12 @@
 from tira.third_party_integrations import ir_datasets, get_output_directory
 from pathlib import Path
 import pandas as pd
-
-
-def process_document(document):
-    # Dummy processing of documents: classify each document as spam
-    return {'docno': document.doc_id, 'label': 'spam'}
+import pyterrier_doc2query
 
 
 def process_documents(document_iter):
-    return pd.DataFrame([process_document(i) for i in document_iter])
+    doc2query = pyterrier_doc2query.Doc2Query(verbose=True)
+    return doc2query(pd.DataFrame(list(document_iter)))
 
 
 if __name__ == '__main__':
