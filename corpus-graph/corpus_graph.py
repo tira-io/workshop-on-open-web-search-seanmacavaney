@@ -20,12 +20,13 @@ def process_documents(document_iter, retr):
     results = []
     for batch in chunked(tqdm(document_iter, unit='d'), 1000):
         batch = pd.DataFrame(batch).rename(columns={'doc_id': 'qid', 'text': 'query'})
+        batch['qid'] = batch['qid'].astype(str)
         batch['query'] = batch['query'].apply(pt_tokenise)
         res = retr(batch)
         res = dict(iter(res.groupby('qid')))
         results.extend({
             'docno': d.qid,
-            'neighbors': list(res[d.qid]['docno'][res[d.qid]['docno'] != d.qid]),
+            'neighbors': [] if d.qid not in res else list(res[d.qid]['docno'][res[d.qid]['docno'] != d.qid]),
         } for d, r in zip(batch.itertuples(), res))
     return pd.DataFrame(results)
 
