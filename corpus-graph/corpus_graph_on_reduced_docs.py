@@ -8,7 +8,7 @@ from tqdm import tqdm
 import random
 import argparse
 
-def build_queries_per_document(index, top_terms_per_document=50, seed=42):
+def build_queries_per_document(index, seed=42):
     meta = index.getMetaIndex()
     doi = index.getDocumentIndex()
     lex = index.getLexicon()
@@ -35,7 +35,7 @@ def find_neighbours(batch, bm25):
     for docno, tmp in dict(iter(bm25([i for i in batch if i['query']]).groupby('qid'))).items():
         ret[docno] = [i for i in tmp['docno'].tolist() if i != docno]
 
-    return ret
+    return [{'docno': qid, 'neighbors': ret[qid]} for qid in ret]
 
 def process_documents(docs, bm25):
     ret = []
@@ -53,9 +53,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('index')
+    parser.add_argument('--top-terms-per-document', type=int, default=50)
     args = parser.parse_args()
 
     ensure_pyterrier_is_loaded()
+    top_terms_per_document = args.top_terms_per_document
     index = pt.IndexFactory.of(str(Path(args.index).resolve()) + '/index/')
     bm25 = pt.BatchRetrieve(index, wmodel='BM25', num_results=16)
 
