@@ -8,7 +8,7 @@ from tqdm import tqdm
 import random
 import argparse
 
-def build_queries_per_document(index, seed=42):
+def build_queries_per_document(index, seed=42, allow_list):
     meta = index.getMetaIndex()
     doi = index.getDocumentIndex()
     lex = index.getLexicon()
@@ -16,6 +16,8 @@ def build_queries_per_document(index, seed=42):
     ret = {}
 
     for doc_id in tqdm(range(0, doi.getNumberOfDocuments()), 'Extracting Document Representations'):
+        if allow_list and doc_id not in allow_list:
+            continue
         doc = doi.getDocumentEntry(doc_id)
         term_to_count = {}
         for posting in di.getPostings(doc):
@@ -54,6 +56,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('index')
     parser.add_argument('--top-terms-per-document', type=int, default=50)
+    parser.add_argument('--allow-list-docs', type=str, default=None)
     args = parser.parse_args()
 
     ensure_pyterrier_is_loaded()
@@ -61,6 +64,10 @@ if __name__ == '__main__':
     index = pt.IndexFactory.of(str(Path(args.index).resolve()) + '/index/')
     bm25 = pt.BatchRetrieve(index, wmodel='BM25', num_results=16)
 
+    allow_list = None
+    if args.allow_list_docs is not None:
+        allow_list = set(list(pd.read_json(args.allow_list_docs, lines=True)['docno'].unique()))
+    
     doc_id_to_query = build_queries_per_document(index)
     docs = [{'qid': i, 'query': doc_id_to_query[i]} for i in doc_id_to_query.keys()]
 
