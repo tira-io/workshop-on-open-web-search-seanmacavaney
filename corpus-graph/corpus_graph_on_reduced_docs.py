@@ -8,16 +8,16 @@ from tqdm import tqdm
 import random
 import argparse
 
-def build_queries_per_document(index, seed=42, allow_list):
+def build_queries_per_document(index, range_start=0, range_end=None, seed=42, top_terms_per_document=50):
     meta = index.getMetaIndex()
     doi = index.getDocumentIndex()
     lex = index.getLexicon()
     di = index.getDirectIndex()
     ret = {}
+    range_end = range_end if range_end is not None else doi.getNumberOfDocuments()
+    range_end = min(range_end, doi.getNumberOfDocuments())
 
-    for doc_id in tqdm(range(0, doi.getNumberOfDocuments()), 'Extracting Document Representations'):
-        if allow_list and doc_id not in allow_list:
-            continue
+    for doc_id in tqdm(range(range_start, range_end), 'Extracting Document Representations'):
         doc = doi.getDocumentEntry(doc_id)
         term_to_count = {}
         for posting in di.getPostings(doc):
@@ -41,10 +41,21 @@ def find_neighbours(batch, bm25):
 
 def process_documents(docs, bm25):
     ret = []
-    for batch in tqdm(list(chunked(docs, 1000)), 'Processing Batches.'):
+    for batch in tqdm(list(chunked(docs, 50)), 'Processing Batches.'):
         ret += find_neighbours(batch, bm25)
 
     return pd.DataFrame(ret)
+
+def construct_corpus_graph_for_range(index_dir, top_terms_per_document, range_start=0, range_end=None):
+    ensure_pyterrier_is_loaded()
+    index = pt.IndexFactory.of(index_dir)
+    bm25 = pt.BatchRetrieve(index, wmodel='BM25', num_results=16)
+    
+    doc_id_to_query = build_queries_per_document(index, range_start, range_end, top_terms_per_document)
+    docs = [{'qid': i, 'query': doc_id_to_query[i]} for i in doc_id_to_query.keys()]
+
+    # process the documents, store results at expected location.
+    return process_documents(docs, bm25)
 
 if __name__ == '__main__':
     # The expected output directory, injected via the environment variable TIRA_OUTPUT_DIRECTORY
@@ -56,21 +67,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('index')
     parser.add_argument('--top-terms-per-document', type=int, default=50)
-    parser.add_argument('--allow-list-docs', type=str, default=None)
+    parser.add_argument('--range-start', type=int, default=0)
+    parser.add_argument('--range-end', type=int, default=None)
     args = parser.parse_args()
 
-    ensure_pyterrier_is_loaded()
-    top_terms_per_document = args.top_terms_per_document
-    index = pt.IndexFactory.of(str(Path(args.index).resolve()) + '/index/')
-    bm25 = pt.BatchRetrieve(index, wmodel='BM25', num_results=16)
-
-    allow_list = None
-    if args.allow_list_docs is not None:
-        allow_list = set(list(pd.read_json(args.allow_list_docs, lines=True)['docno'].unique()))
-    
-    doc_id_to_query = build_queries_per_document(index)
-    docs = [{'qid': i, 'query': doc_id_to_query[i]} for i in doc_id_to_query.keys()]
-
-    # process the documents, store results at expected location.
-    processed_documents = process_documents(docs, bm25)
+    processed_documents = construct_corpus_graph_for_range(
+        str(Path(args.index).resolve()) + '/index/',
+        args.top_terms_per_document,
+        args.range_start,
+        args.range_end
+    )
     processed_documents.to_json(output_file, lines=True, orient='records')
