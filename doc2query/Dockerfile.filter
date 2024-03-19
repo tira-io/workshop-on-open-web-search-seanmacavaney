@@ -1,0 +1,5 @@
+#docker build -t registry.webis.de/code-research/tira/tira-user-seanmacavaney/submission-doc2query:filter-0.0.1 -f Dockerfile.filter .
+FROM webis/wows-2024-baseline:0.0.5
+
+ADD filter-doc2query.py /filter-doc2query.py
+
