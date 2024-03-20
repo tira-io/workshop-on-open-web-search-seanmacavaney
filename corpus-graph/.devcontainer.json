@@ -1,0 +1,16 @@
+{
+  "image": "mam10eks/corpus-graph:0.0.1",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-python.vscode-pylance", "ms-toolsai.jupyter"]
+    }
+  },
+  "runArgs": [
+    "--network=host"
+  ],
+  "mounts": [
+    "source=/home/maik/.kube,target=/home/spark/.kube,type=bind",
+    "source=/home/maik/.kube,target=/root/.kube,type=bind",
+    "source=${localWorkspaceFolder}/hostname,target=/etc/hostname,type=bind",
+  ]
+}
