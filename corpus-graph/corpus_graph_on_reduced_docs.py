@@ -33,8 +33,11 @@ def build_queries_per_document(index, range_start=0, range_end=None, seed=42, to
 
 def find_neighbours(batch, bm25):
     ret = {i['qid']: [] for i in batch}
+    batch = [i for i in batch if i['query']]
+    if len(batch) == 0:
+        return []
 
-    for docno, tmp in dict(iter(bm25([i for i in batch if i['query']]).groupby('qid'))).items():
+    for docno, tmp in dict(iter(bm25(batch).groupby('qid'))).items():
         ret[docno] = [i for i in tmp['docno'].tolist() if i != docno]
 
     return [{'docno': qid, 'neighbors': ret[qid]} for qid in ret]
